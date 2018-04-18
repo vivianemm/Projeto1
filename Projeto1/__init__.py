@@ -11,10 +11,11 @@ def master_bias():
 	bias_fits=[]
 	for i in imagens_bias:
 		img = fits.getdata(i)
+		img = img.astype(np.float64)
 		bias_fits.append(img)
 	
 	bias_fits = np.array(bias_fits)
-	master_bias = np.median(bias_fits)
+	master_bias = np.median(bias_fits,axis=1) 
 	
 	hdu = fits.PrimaryHDU()                #criando HDU
 	hdu.data = master_bias
@@ -34,7 +35,7 @@ def masterFlat():
 		flats_fits.append(img)
 		
 	bias_fits = np.array(flats_fits)
-	master_flat = np.median(flats_fits)
+	master_flat = np.median(flats_fits, axis=1)
 	
 	hdu = fits.PrimaryHDU()                #criando HDU
 	hdu.data = master_flat
