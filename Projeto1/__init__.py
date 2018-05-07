@@ -363,3 +363,15 @@ def science_bf(data_path, science_bias, master_flat, prefix_science, save = True
 #masterf = master_flat(data_path, fbn)
 #science_b(data_path, 'xo2b',mb)
 
+#testes estatisticos
+# flat - valores de media ou mediana dos norms entre 0.999 e 1.0001
+# masterbias - valores de media ou mediana menor que 30
+# ciencia - plotar diferenca entre imagens reduzidas e n reduzidas em um mapa de cores
+# ccd mais eficiente no meio, diferenca no meio tem que ser menor que nas bordas
+
+#def science_test():
+#	img = img.getdata...
+#	x = img_r - img
+#	plot.figure(x)
+#	plot.imshow
+

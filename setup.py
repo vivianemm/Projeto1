@@ -7,5 +7,5 @@ setup(name='Projeto1',
 	author='Viviane Matioli',
 	author_email='viviane.mmat@gmail.com',
 	license='GNU General Public License',
-	packages=['PyPackage'],
+	packages=['Projeto1'],
 	zip_safe=False)
