@@ -1,16 +1,22 @@
 
 '''
+
 Projeto1
 
+
+
+Viviane Matioli
 ______________
 Pacote para reducao padrao de dados fotometricos
 Faz a correcao de bias e flat das imagens de ciencia
 
-funciona com imagens de bias, flat e ciencia em formato fits
-Imagens finais e geradas durante o processo de reducao podem ser salvas em formato fits
+Funciona com imagens em formato fits
+Imagens finais e geradas durante o processo de reducao tambem podem 
+ser salvas em formato fits
 
 ________
 funcoes:
+
 find_files
 save_fits
 master_bias
@@ -22,10 +28,6 @@ science_bf
 test_bias
 test_flat
 
-
-git add --all
-git commit -m 'comentario'
-git push -u origin master
 
 '''
 
@@ -87,22 +89,25 @@ def find_files(data_path, prefix):
 	exemplo:
 	find_files('/home2/viviane15/Downloads/xo2b/', 'bias')
 	'''
+	# array com caminhos das imagens fits com o prefixo especificado
 	paths = np.sort(glob.glob(data_path +  prefix + '*fits'))
-	fit_files=[]
+	fit_files=[] # lista para receber as imagens
 
 	cont = 1
 	n = float(len(paths))
 	print("\nProgress find_files {0} : 0->1".format(prefix))
+	# laco for para importar as imagens fits 
 	for i in paths:
 		img = fits.getdata(i)
 		img = img.astype(np.float64)
 		fit_files.append(img)
 
-		update_progress(cont / n)
+		update_progress(cont / n) # barra de progresso
 		cont += 1
-
+	
+	#convertendo lista em array
 	fit_files = np.array(fit_files)
-	return fit_files
+	return fit_files # array com as imagens fits 
 
 
 @jit
@@ -133,12 +138,15 @@ def save_fits(data_path, s, nome, comment = '', folder = ''):
 	if not file.is_file():
 
 		hdu = fits.PrimaryHDU()
-
+	
+		# Criando novo folder se especificado no parametro de entrada
+		# se folder ja existir, a imagem sera salva nele
 		if folder != '':
 			Path(data_path + folder).mkdir(exist_ok=True)
-
+		
+		# salvando a imagem em formato fits
 		hdu.data = s
-		hdu.header['comment'] = comment
+		hdu.header['comment'] = comment # adicionando comentario ao header
 		hdu.writeto(outfile)
 
 	else:
@@ -189,6 +197,9 @@ def flat_b(data_path, mb, prefix_flat = 'flat', save = False, folder = 'flats_b/
 
 	n = float(len(flat_files))
 	cont = 1
+	
+	# comentario adicionado ao header de cada arquivo fits
+	comment = 'Flat reduzido de bias'
 
 	# inicializando lista para receber matrizes de flat corrigidas de bias
 	flats_b = []
@@ -199,8 +210,6 @@ def flat_b(data_path, mb, prefix_flat = 'flat', save = False, folder = 'flats_b/
 		flats_b.append(f_b)
 
 		if save:
-			# comentario adicionado ao header de cada arquivo fits de flats reduzidos de bias
-			comment = 'Flat reduzido de bias'
 			save_fits(data_path, f_b, 'flat_b_' + str(cont), comment, folder)  # ??? substitui pasta?
 
 		update_progress(cont / n)
@@ -233,16 +242,18 @@ def normal_flat(data_path, fb, save = False, folder = 'normal_flats/'):
 	norms = []
 	cont = 1
 	print("\nProgress normal_flat : 0->1")
+	
+	# comentario a ser adicionado ao header de cada arquivo fits
+	comment = 'Flat reduzido de bias e normalizado'
 
 	# laco para normalizacao das matrizes de flat, atraves da divisao de cada um pela sua mediana
 	for i in fb:
 		med = np.median(i)
 		norm = i/med
 		norms.append(norm)
-
+		
+		#salvando em arquivos fits
 		if save:
-			# comentario adicionado ao header de cada arquivo fits de flats normalizados
-			comment = 'Flat reduzido de bias e normalizado'
 			save_fits(data_path, norm, 'normal_flat_' + str(cont), comment, folder)
 
 
@@ -271,11 +282,10 @@ def master_flat(data_path, norms, save = True, folder = 'master/'):
 
 	# obtendo a matriz master_flat pela mediana das matrizes de flat corrigidas de bias e normalizadas
 	master_flat = np.median(norms, axis=0)
-
+	
 	if save:
-		n = len(norms)
+		n = len(norms) # comentario a ser adicionado ao header
 		comment = 'Masterflat obtido a partir da mediana de {0} imagens de flat apos a reducao de bias e normalizacao'.format(str(n))
-
 		save_fits(data_path, master_flat, 'master_flat', comment, folder)
 
 	return master_flat
@@ -304,17 +314,18 @@ def science_b(data_path, prefix_science, mb, save = False, folder = 'science_b/'
 
 	# inicializando lista para receber matrizes de ciencia apos a correcao de bias
 	science_b = []
+	comment = 'imagem de ciencia reduzida de bias' # comentario a ser adicionado ao header
+	
 	print("\nProgress science_b : 0->1")
 	# laco para correcao de bias da ciencia, subtraindo a matriz de master bias de cada imagem de ciencia
 	for i in science_files:
 		s_b = i - mb
 		science_b.append(s_b)
 
-		if save:
-			comment = 'imagem de ciencia reduzida de bias'
+		if save: #salvando em arquivos fits
 			save_fits(data_path, s_b, prefix_science + '_b_' + str(cont), comment, folder)
 
-		update_progress(cont / n)
+		update_progress(cont / n) # barra de progresso
 		cont += 1
 
 	# convertendo a lista em array
@@ -350,13 +361,13 @@ def science_bf(data_path, science_bias, master_flat, prefix_science, save = True
 	print("\nProgress science_bf : 0->1")
 	# laco para correcao de flat da ciencia, dividindo cada imagem de ciencia pela matriz de master flat
 	for i in science_bias:
-		science_bf = i/master_flat
-		science_bf.append(science_bf)
+		s_bf = i/master_flat
+		science_bf.append(s_bf)
 
-		if save:
+		if save: # salvando em arquivos fits
 			save_fits(data_path, science_bf, prefix_science + '_bf_' + str(cont), comment, folder)
 
-		update_progress(cont / n)
+		update_progress(cont / n) # barra de progresso
 		cont += 1
 
 	# convertendo a lista em array
@@ -382,7 +393,7 @@ def test_flat(norms):
 			problem.append(i)
 
 	n = len(problem)
-	print ('{0} flats com mediana fora do intervalo esperado'.format(n))
+	print ('{0} flats com mediana fora do intervalo esperado\n'.format(n))
 	return problem
 
 
@@ -398,7 +409,7 @@ def test_mbias(master_bias):
 	med = np.median(master_bias)
 	# verificando se mediana do masterbias eh menor ou maior que 30
 	if med < 30:
-		print('Mediana do masterbias está dentro do intervalo esperado')
+		print('Mediana do masterbias está dentro do intervalo esperado\n')
 	else:
-		print ('Mediana do masterbias é mais alta do que esperado')
+		print ('Mediana do masterbias é mais alta do que esperado\n')
 
