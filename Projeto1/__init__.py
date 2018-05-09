@@ -1,16 +1,13 @@
 
 '''
-Pacote Reducao Fotometria
-
+Projeto1
 
 ______________
-Pacote para reducao de dados fotometricos 
+Pacote para reducao padrao de dados fotometricos
 Faz a correcao de bias e flat das imagens de ciencia
 
 funciona com imagens de bias, flat e ciencia em formato fits
-Imagens finais e geradas durante o processo de reducao podem ser salvas em formato fits:
-masterbias, flats reduzidos de bias, flats reduzidos de bias e normalizados, masterflat, ciencia reduzida de bias,
-ciencia reduzida de bias e flat
+Imagens finais e geradas durante o processo de reducao podem ser salvas em formato fits
 
 ________
 funcoes:
@@ -22,6 +19,8 @@ normal_flat
 master_flat
 science_b
 science_bf
+test_bias
+test_flat
 
 
 git add --all
@@ -35,9 +34,8 @@ from astropy.io import fits
 import numpy as np
 from numba import jit
 from pathlib import Path
-import time
 import sys
-import os
+
 
 def update_progress(progress):
     """
@@ -114,8 +112,8 @@ def save_fits(data_path, s, nome, comment = '', folder = ''):
 	Nao pode ser salvo se ja existir arquivo com mesmo nome no diretorio, apenas retornando mensagem informando se for
 	o caso
 
-	:param data_path: str - caminho do diretorio onde sera salvo o arquivo fit
-	:param s:
+	:param data_path: str - caminho do diretorio onde sera salvo o arquivo fits
+	:param s: matriz a ser salva em formato fits
 	:param nome: str - nome que sera dado ao arquivo (sem extensao .fits)
 	:param comment: str - comentario que pode ser adicionado ao header da imagem fits se especificado, default =''
 	:param pasta: str - nome do novo diretorio (terminando com /) que pode ser criado para destino do arquivo
@@ -137,7 +135,7 @@ def save_fits(data_path, s, nome, comment = '', folder = ''):
 		hdu = fits.PrimaryHDU()
 
 		if folder != '':
-			Path(data_path + folder).mkdir(exist_ok=True)  #substitui pasta existente
+			Path(data_path + folder).mkdir(exist_ok=True)
 
 		hdu.data = s
 		hdu.header['comment'] = comment
@@ -149,15 +147,15 @@ def save_fits(data_path, s, nome, comment = '', folder = ''):
 
 
 @jit
-def master_bias(data_path, prefix_bias = 'bias', save = True, folder = '/master/'):
+def master_bias(data_path, prefix_bias = 'bias', save = True, folder = 'master/'):
 	'''
 	Gera uma matriz de master_bias atraves da mediana das matrizes de bias, podendo salvar em arquivo fits
 
 	:param data_path: str - caminho do diretorio onde estao os arquivos de bias em formato fit
 	:param prefix_bias: str - prefixo do nome dos arquivos de bias, default: 'bias'
 	:param save: bool - chama funcao save para salvar o master bias em um arquivo fits, default: True
-
-	________
+	:param folder: str - nome do diretorio de destino da imagem fits - nao precisa existir. default: 'master/'
+		________
 	:return: matriz do master bias
 	'''
 
@@ -179,10 +177,11 @@ def flat_b(data_path, mb, prefix_flat = 'flat', save = False, folder = 'flats_b/
 	Cria array com matrizes dos flats e faz a reducao de bias, atraves da subtracao da matriz de master_bias
 	de cada matriz de flat
 
-	:param data_path: str - caminho do diretorio onde estao os arquivos de flat em formato fit
+	:param data_path: str - caminho do diretorio onde estao os arquivos de flat em formato fits
 	:param prefix_flat: str - prefixo do nome dos arquivos de flat, default: 'flat'
 	:param mb: matriz de master bias
-
+	:param save: bool - chama funcao save para salvar imagens em um arquivo fits, default: False
+	:param folder: str - nome do diretorio de destino das imagen fits - nao precisa existir.  default: 'flats_b'
 	________
 	:return: array com matrizes de flat reduzidas de bias
 	'''
@@ -218,7 +217,10 @@ def normal_flat(data_path, fb, save = False, folder = 'normal_flats/'):
 	'''
 	Cria array de flats normalizados a partir de array de flats ja reduzidos de bias, dividindo cada um pela sua mediana
 
+	:param data_path: str - caminho do diretorio onde serao salvas as imagens fits (sem o nome da nova pasta)
 	:param fb: array com matrizes de flat reduzidas de bias
+	:param save: bool - chama funcao save para salvar imagens em um arquivo fits, default: False
+	:param folder: str - nome do diretorio de destino das imagens fits - nao precisa existir.  default: normal_flats/'
 
 	________
 	:return: array de matrizes de flat reduzidas de bias e normalizadas
@@ -241,7 +243,7 @@ def normal_flat(data_path, fb, save = False, folder = 'normal_flats/'):
 		if save:
 			# comentario adicionado ao header de cada arquivo fits de flats normalizados
 			comment = 'Flat reduzido de bias e normalizado'
-			save_fits(data_path, norm, 'normal_flat_' + str(cont), comment, folder)  # ??? substitui pasta?
+			save_fits(data_path, norm, 'normal_flat_' + str(cont), comment, folder)
 
 
 		update_progress(cont / n)
@@ -258,9 +260,11 @@ def normal_flat(data_path, fb, save = False, folder = 'normal_flats/'):
 def master_flat(data_path, norms, save = True, folder = 'master/'):
 	'''
 	Gera master flat atraves da mediana de array de flats reduzidos de bias e normalizados, podendo salvar em formato fits
-
+	
+	:param data_path: str - caminho do diretorio onde serao salvas as imagens fits (sem o nome da nova pasta)
 	:param norms: array - array com imagens de flats reduzidos de bias e normalizados
-
+	:param save: bool - chama funcao save para salvar imagem em um arquivo fits, default: True
+	:param folder: nome do diretorio de destino da imagem fits - nao precisa existir.  default: 'master/'	
 	________
 	:return: array - imagem do master flat obtido pela mediana
 	'''
@@ -278,13 +282,15 @@ def master_flat(data_path, norms, save = True, folder = 'master/'):
 
 
 @jit
-def science_b(data_path, prefix_science, mb, save = False, folder = 'science_B/'):
+def science_b(data_path, prefix_science, mb, save = False, folder = 'science_b/'):
 	'''
 	Cria array com matrizes de ciencia retorna array com suas matrizes reduzidas de bias
 
 	:param data_path: Type: str - caminho do diretorio onde estao os arquivos de ciencia em formato fit
 	:param prefix_science: Type: str - prefixo dos arquivos de ciencia
 	:param mb: array - matriz de master_bias
+	:param save: bool - chama funcao save para salvar imagens em um arquivo fits, default: False
+	:param folder: nome do diretorio de destino das imagens fits - nao precisa existir.  default: science_b/'
 
 	________
 	:return: array - array de matrizes de ciencia reduzidas de bias
@@ -321,13 +327,15 @@ def science_b(data_path, prefix_science, mb, save = False, folder = 'science_B/'
 def science_bf(data_path, science_bias, master_flat, prefix_science, save = True, folder = 'science_bf/'):
 	'''
 
-
 	:param science_bias: array - array de matrizes de ciencia ja reduzidas de bias
 
 	:param master_flat: array - matriz de master flat
-
-	:param pasta_ciencia: str - nome do novo diretorio onde serao salvas as imagens de ciencia reduzidas de bias e flat
-	em formato fits, default: 'ciencia_bf/'
+	
+	:param prefix_science: str - prefixo do nome das imagens de ciencia
+	
+	:param save: bool - chama funcao save para salvar imagens em um arquivo fits, default: False
+	
+	:param folder: str - nome do diretorio de destino das imagens fits - nao precisa existir.  default: science_bf/'
 
 	________
 	:return: array - array de matrizes das imagens de ciencia reduzidas de bias e flat
@@ -356,22 +364,41 @@ def science_bf(data_path, science_bias, master_flat, prefix_science, save = True
 
 	return science_bf  # array com imagens de ciencia corrigidas de bias e flat
 
-#data_path = '/Users/Viviane/Downloads/xo2b/xo2b/'
-#mb = master_bias(data_path, 'bias')
-#fb = flat_b(data_path, mb, 'flat')
-#fbn = normal_flat(data_path, fb)
-#masterf = master_flat(data_path, fbn)
-#science_b(data_path, 'xo2b',mb)
 
-#testes estatisticos
-# flat - valores de media ou mediana dos norms entre 0.999 e 1.0001
-# masterbias - valores de media ou mediana menor que 30
-# ciencia - plotar diferenca entre imagens reduzidas e n reduzidas em um mapa de cores
-# ccd mais eficiente no meio, diferenca no meio tem que ser menor que nas bordas
+def test_flat(norms):
+	'''
+	teste estatistico para os flats normalizados
 
-#def science_test():
-#	img = img.getdata...
-#	x = img_r - img
-#	plot.figure(x)
-#	plot.imshow
+	:param norms: array de flats normalizados
+	:return: array com flats que possuem mediana fora do intervalo esperado
+	'''
+
+	problem =[]
+	for i in norms:
+		med = np.median(i)
+
+		#verificando se mediana de cada flat normalizado esta proxima de 1
+		if not 0.9999 < med < 1.0001:
+			problem.append(i)
+
+	n = len(problem)
+	print ('{0} flats com mediana fora do intervalo esperado'.format(n))
+	return problem
+
+
+
+def test_mbias(master_bias):
+	'''
+	teste estatistico para o masterbias
+
+	:param master_bias: matriz masterbias
+	:return: none
+	'''
+
+	med = np.median(master_bias)
+	# verificando se mediana do masterbias eh menor ou maior que 30
+	if med < 30:
+		print('Mediana do masterbias está dentro do intervalo esperado')
+	else:
+		print ('Mediana do masterbias é mais alta do que esperado')
 
